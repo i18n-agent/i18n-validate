@@ -1,3 +1,4 @@
+pub mod cldr_plurals;
 pub mod cli;
 pub mod config;
 pub mod diagnostic;

@@ -5,6 +5,7 @@ mod missing_languages;
 mod orphaned_languages;
 mod parse_errors;
 mod placeholders;
+mod plural_requirements;
 mod plural_structure;
 mod untranslated;
 
@@ -28,6 +29,7 @@ pub fn run_all(ctx: &ValidationContext) -> Vec<Diagnostic> {
         Box::new(extra_keys::ExtraKeysValidator),
         Box::new(placeholders::PlaceholdersValidator),
         Box::new(plural_structure::PluralStructureValidator),
+        Box::new(plural_requirements::PluralRequirementsValidator),
         Box::new(parse_errors::ParseErrorsValidator),
         Box::new(empty_values::EmptyValuesValidator),
         Box::new(untranslated::UntranslatedValidator),

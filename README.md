@@ -23,11 +23,12 @@ Most validation tools are format-specific (JSON-only, YAML-only) and require cus
 
 ## Features
 
-- **9 validation checks** — missing keys, extra keys, broken placeholders, malformed plurals, empty values, untranslated strings, and more
+- **10 validation checks** — missing keys, extra keys, broken placeholders, malformed plurals, CLDR plural requirements, empty values, untranslated strings, and more
 - **32 formats** — JSON, YAML, XLIFF, Android XML, iOS Strings, Gettext PO, and [27 more](#supported-formats)
 - **3 output modes** — colored terminal, JSON, JUnit XML (for CI test reporters)
 - **Zero-config** — auto-detects layout, format, and reference language
 - **Configurable** — `.i18n-validate.toml` for per-check severity overrides, per-language exceptions, and file filtering
+- **CLDR-aware** — validates plural forms against CLDR v44 rules (e.g., Arabic needs 6 forms, Russian needs 4, Japanese needs 1)
 - **Locale-aware** — normalizes `zh_Hans`, `zh-Hans`, `zh-hans` to the same code
 - **Fast** — native Rust binary, processes thousands of files in milliseconds
 
@@ -175,6 +176,7 @@ skip = true                   # Exclude Arabic from validation
 | Extra keys | `extra-keys` | Key exists in translation but not in reference |
 | Placeholder mismatch | `placeholders` | `{price}`, `{{name}}`, `%s` differ between languages |
 | Plural structure | `plural-structure` | Plural forms are malformed or missing required categories |
+| Plural requirements | `plural-requirements` | Plural forms don't match CLDR rules for the target language (see below) |
 | Parse errors | `parse-errors` | File fails to parse (broken JSON, XML, YAML, etc.) |
 
 ### Warnings (default)
@@ -183,6 +185,26 @@ skip = true                   # Exclude Arabic from validation
 |-------|-----|----------------|
 | Empty values | `empty-values` | Key is present but the translation is an empty string |
 | Untranslated | `untranslated` | Translation is identical to the reference language (likely copy-paste) |
+
+### CLDR Plural Requirements
+
+The `plural-requirements` check validates that each translation provides the correct plural forms for its language, based on [CLDR v44 cardinal plural rules](https://unicode.org/cldr/charts/44/supplemental/language_plural_rules.html).
+
+**Missing** required forms are reported as **errors**. **Extra** (unnecessary) forms are reported as **warnings**.
+
+| Language | Required plural forms | Count |
+|----------|----------------------|-------|
+| Japanese, Chinese, Korean, Vietnamese, Thai, Indonesian, Malay | `other` | 1 |
+| English, German, French, Spanish, Italian, Portuguese, Dutch, Swedish, Finnish, Turkish, Hindi, Bengali, and [100+ more](#) | `one`, `other` | 2 |
+| Hebrew, Inuktitut, Northern Sami | `one`, `two`, `other` | 3 |
+| Latvian, Colognian, Langi | `zero`, `one`, `other` | 3 |
+| Croatian, Serbian, Bosnian, Romanian | `one`, `few`, `other` | 3 |
+| Russian, Ukrainian, Polish, Czech, Slovak, Lithuanian, Belarusian | `one`, `few`, `many`, `other` | 4 |
+| Slovenian, Scottish Gaelic, Lower/Upper Sorbian | `one`, `two`, `few`, `other` | 4 |
+| Irish, Maltese, Breton, Manx | `one`, `two`, `few`, `many`, `other` | 5 |
+| Arabic, Welsh, Cornish | `zero`, `one`, `two`, `few`, `many`, `other` | 6 |
+
+The database covers **160+ languages** with automatic locale normalization (e.g., `pt-BR` → `pt`, `zh-Hans` → `zh`) and legacy alias resolution (`iw` → `he`, `in` → `id`).
 
 ## CLI Reference
 
@@ -250,6 +272,7 @@ missing-keys = "error"
 extra-keys = "error"
 placeholders = "error"
 plural-structure = "error"
+plural-requirements = "error"
 missing-languages = "error"
 orphaned-languages = "error"
 parse-errors = "error"
