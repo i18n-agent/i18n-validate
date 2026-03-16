@@ -66,9 +66,7 @@ pub fn detect(
             if locale::extract_from_path(&name_str).is_some() {
                 has_locale_dirs = true;
             }
-        } else if file_type.is_file()
-            && locale::extract_from_filename(&name_str).is_some()
-        {
+        } else if file_type.is_file() && locale::extract_from_filename(&name_str).is_some() {
             has_locale_files = true;
         }
     }

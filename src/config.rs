@@ -126,10 +126,7 @@ pub fn resolve(args: &Args) -> Result<ResolvedConfig, Box<dyn std::error::Error>
     };
 
     let layout = if let Some(ref layout_str) = args.layout {
-        Some(
-            Layout::parse(layout_str)
-                .ok_or_else(|| format!("Unknown layout: {layout_str}"))?,
-        )
+        Some(Layout::parse(layout_str).ok_or_else(|| format!("Unknown layout: {layout_str}"))?)
     } else if let Some(ref layout_str) = toml.layout {
         Some(
             Layout::parse(layout_str)

@@ -40,7 +40,10 @@ pub fn render(
         out.push('\n');
         out.push_str(&separator);
         out.push('\n');
-        out.push_str(&format!("{}\n", format!("ERRORS ({error_count})").red().bold()));
+        out.push_str(&format!(
+            "{}\n",
+            format!("ERRORS ({error_count})").red().bold()
+        ));
         out.push('\n');
         render_grouped(&mut out, diagnostics, Severity::Error);
     }
@@ -74,10 +77,7 @@ pub fn render(
     if error_count > 0 {
         out.push_str(&format!("  {}\n", "x Validation failed".red().bold()));
     } else {
-        out.push_str(&format!(
-            "  {}\n",
-            "v Validation passed".green().bold()
-        ));
+        out.push_str(&format!("  {}\n", "v Validation passed".green().bold()));
     }
 
     Ok(out)

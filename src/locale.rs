@@ -7,32 +7,18 @@ static LOCALE_RE: LazyLock<Regex> = LazyLock::new(|| {
 
 /// Known ISO 639-1 two-letter language codes (subset for validation).
 const ISO_639_1: &[&str] = &[
-    "aa", "ab", "af", "ak", "am", "an", "ar", "as", "av", "ay", "az",
-    "ba", "be", "bg", "bh", "bi", "bm", "bn", "bo", "br", "bs",
-    "ca", "ce", "ch", "co", "cr", "cs", "cu", "cv", "cy",
-    "da", "de", "dv", "dz",
-    "ee", "el", "en", "eo", "es", "et", "eu",
-    "fa", "ff", "fi", "fj", "fo", "fr", "fy",
-    "ga", "gd", "gl", "gn", "gu", "gv",
-    "ha", "he", "hi", "ho", "hr", "ht", "hu", "hy", "hz",
-    "ia", "id", "ie", "ig", "ii", "ik", "in", "io", "is", "it", "iu", "iw",
-    "ja", "ji", "jv", "jw",
-    "ka", "kg", "ki", "kj", "kk", "kl", "km", "kn", "ko", "kr", "ks", "ku", "kv", "kw", "ky",
-    "la", "lb", "lg", "li", "ln", "lo", "lt", "lu", "lv",
-    "mg", "mh", "mi", "mk", "ml", "mn", "mo", "mr", "ms", "mt", "my",
-    "na", "nb", "nd", "ne", "ng", "nl", "nn", "no", "nr", "nv", "ny",
-    "oc", "oj", "om", "or", "os",
-    "pa", "pi", "pl", "ps", "pt",
-    "qu",
-    "rm", "rn", "ro", "ru", "rw",
-    "sa", "sc", "sd", "se", "sg", "sh", "si", "sk", "sl", "sm", "sn", "so", "sq", "sr", "ss", "st", "su", "sv", "sw",
-    "ta", "te", "tg", "th", "ti", "tk", "tl", "tn", "to", "tr", "ts", "tt", "tw", "ty",
-    "ug", "uk", "ur", "uz",
-    "ve", "vi", "vo",
-    "wa", "wo",
-    "xh",
-    "yi", "yo",
-    "za", "zh", "zu",
+    "aa", "ab", "af", "ak", "am", "an", "ar", "as", "av", "ay", "az", "ba", "be", "bg", "bh", "bi",
+    "bm", "bn", "bo", "br", "bs", "ca", "ce", "ch", "co", "cr", "cs", "cu", "cv", "cy", "da", "de",
+    "dv", "dz", "ee", "el", "en", "eo", "es", "et", "eu", "fa", "ff", "fi", "fj", "fo", "fr", "fy",
+    "ga", "gd", "gl", "gn", "gu", "gv", "ha", "he", "hi", "ho", "hr", "ht", "hu", "hy", "hz", "ia",
+    "id", "ie", "ig", "ii", "ik", "in", "io", "is", "it", "iu", "iw", "ja", "ji", "jv", "jw", "ka",
+    "kg", "ki", "kj", "kk", "kl", "km", "kn", "ko", "kr", "ks", "ku", "kv", "kw", "ky", "la", "lb",
+    "lg", "li", "ln", "lo", "lt", "lu", "lv", "mg", "mh", "mi", "mk", "ml", "mn", "mo", "mr", "ms",
+    "mt", "my", "na", "nb", "nd", "ne", "ng", "nl", "nn", "no", "nr", "nv", "ny", "oc", "oj", "om",
+    "or", "os", "pa", "pi", "pl", "ps", "pt", "qu", "rm", "rn", "ro", "ru", "rw", "sa", "sc", "sd",
+    "se", "sg", "sh", "si", "sk", "sl", "sm", "sn", "so", "sq", "sr", "ss", "st", "su", "sv", "sw",
+    "ta", "te", "tg", "th", "ti", "tk", "tl", "tn", "to", "tr", "ts", "tt", "tw", "ty", "ug", "uk",
+    "ur", "uz", "ve", "vi", "vo", "wa", "wo", "xh", "yi", "yo", "za", "zh", "zu",
 ];
 
 /// BCP 47 normalization:
@@ -117,7 +103,10 @@ fn strip_android_region_prefix(s: &str) -> String {
 /// Returns None for non-locale filenames like `translation.json`.
 pub fn extract_from_filename(filename: &str) -> Option<String> {
     // Strip extension
-    let stem = filename.rsplit_once('.').map(|(s, _)| s).unwrap_or(filename);
+    let stem = filename
+        .rsplit_once('.')
+        .map(|(s, _)| s)
+        .unwrap_or(filename);
 
     // Try the full stem as a locale code
     let normalized = normalize(stem);
@@ -172,11 +161,7 @@ pub fn is_locale_code(s: &str) -> bool {
 
     // Extract the language part (before first separator)
     let normalized = s.replace('_', "-");
-    let lang_part = normalized
-        .split('-')
-        .next()
-        .unwrap_or("")
-        .to_lowercase();
+    let lang_part = normalized.split('-').next().unwrap_or("").to_lowercase();
 
     if lang_part.len() == 2 {
         // 2-letter codes: must be a known ISO 639-1 code
@@ -192,21 +177,16 @@ pub fn is_locale_code(s: &str) -> bool {
         } else {
             // Known 3-letter locale codes (ISO 639-2/3 commonly used in i18n)
             const KNOWN_3_LETTER: &[&str] = &[
-                "aar", "abk", "afr", "aka", "amh", "ara", "asm", "aze",
-                "bak", "bel", "ben", "bod", "bos", "bre", "bul", "cat",
-                "ces", "cmn", "cor", "cym", "dan", "deu", "div", "ell",
-                "eng", "epo", "est", "eus", "fas", "fil", "fin", "fra",
-                "fry", "gle", "glg", "grn", "guj", "hat", "hau", "heb",
-                "hin", "hrv", "hun", "hye", "ibo", "ind", "isl", "ita",
-                "jam", "jav", "jpn", "kan", "kat", "kaz", "khm", "kin",
-                "kor", "kur", "lao", "lat", "lav", "lin", "lit", "ltz",
-                "mal", "mar", "mkd", "mlg", "mlt", "mon", "mri", "msa",
-                "mya", "nep", "nld", "nno", "nob", "nor", "nya", "oci",
-                "ori", "orm", "pan", "pol", "por", "pus", "que", "roh",
-                "ron", "run", "rus", "sin", "slk", "slv", "smo", "sna",
-                "som", "sot", "spa", "sqi", "srp", "sun", "swa", "swe",
-                "tam", "tat", "tel", "tgk", "tgl", "tha", "tir", "ton",
-                "tsn", "tur", "ukr", "urd", "uzb", "vie", "wol", "xho",
+                "aar", "abk", "afr", "aka", "amh", "ara", "asm", "aze", "bak", "bel", "ben", "bod",
+                "bos", "bre", "bul", "cat", "ces", "cmn", "cor", "cym", "dan", "deu", "div", "ell",
+                "eng", "epo", "est", "eus", "fas", "fil", "fin", "fra", "fry", "gle", "glg", "grn",
+                "guj", "hat", "hau", "heb", "hin", "hrv", "hun", "hye", "ibo", "ind", "isl", "ita",
+                "jam", "jav", "jpn", "kan", "kat", "kaz", "khm", "kin", "kor", "kur", "lao", "lat",
+                "lav", "lin", "lit", "ltz", "mal", "mar", "mkd", "mlg", "mlt", "mon", "mri", "msa",
+                "mya", "nep", "nld", "nno", "nob", "nor", "nya", "oci", "ori", "orm", "pan", "pol",
+                "por", "pus", "que", "roh", "ron", "run", "rus", "sin", "slk", "slv", "smo", "sna",
+                "som", "sot", "spa", "sqi", "srp", "sun", "swa", "swe", "tam", "tat", "tel", "tgk",
+                "tgl", "tha", "tir", "ton", "tsn", "tur", "ukr", "urd", "uzb", "vie", "wol", "xho",
                 "yid", "yor", "zho", "zul",
             ];
             KNOWN_3_LETTER.contains(&lang_part.as_str())
@@ -235,7 +215,10 @@ mod tests {
         assert_eq!(extract_from_path("en"), Some("en".to_string()));
         assert_eq!(extract_from_path("de"), Some("de".to_string()));
         assert_eq!(extract_from_path("values-en"), Some("en".to_string()));
-        assert_eq!(extract_from_path("values-pt-rBR"), Some("pt-BR".to_string()));
+        assert_eq!(
+            extract_from_path("values-pt-rBR"),
+            Some("pt-BR".to_string())
+        );
         assert_eq!(extract_from_path("en.lproj"), Some("en".to_string()));
         assert_eq!(extract_from_path("src"), None);
         assert_eq!(extract_from_path("components"), None);

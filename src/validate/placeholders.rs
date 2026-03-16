@@ -93,11 +93,7 @@ impl Validator for PlaceholdersValidator {
 fn extract_placeholder_names(entry: &i18n_convert::ir::I18nEntry) -> HashSet<String> {
     // First try IR-provided placeholders
     if !entry.placeholders.is_empty() {
-        return entry
-            .placeholders
-            .iter()
-            .map(|p| p.name.clone())
-            .collect();
+        return entry.placeholders.iter().map(|p| p.name.clone()).collect();
     }
 
     // Fall back to regex extraction from the value text

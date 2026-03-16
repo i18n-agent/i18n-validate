@@ -60,7 +60,10 @@ pub fn render(
 
             let mut testcase = BytesStart::new("testcase");
             testcase.push_attribute(("name", case_name.as_str()));
-            testcase.push_attribute(("classname", format!("i18n-validate.{}", ctx.ref_lang).as_str()));
+            testcase.push_attribute((
+                "classname",
+                format!("i18n-validate.{}", ctx.ref_lang).as_str(),
+            ));
             writer.write_event(Event::Start(testcase))?;
 
             if d.severity == Severity::Error {

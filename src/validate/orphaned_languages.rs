@@ -36,9 +36,7 @@ impl Validator for OrphanedLanguagesValidator {
                 diagnostics.push(Diagnostic::error(
                     CheckId::OrphanedLanguages,
                     discovered,
-                    format!(
-                        "Language \"{discovered}\" found but not in expected list"
-                    ),
+                    format!("Language \"{discovered}\" found but not in expected list"),
                 ));
             }
         }

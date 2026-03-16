@@ -27,18 +27,22 @@ pub struct ValidationContext {
 /// Check if a filename matches include/exclude patterns.
 fn matches_filters(filename: &str, include: &[String], exclude: &[String]) -> bool {
     if !include.is_empty() {
-        let included = include
-            .iter()
-            .any(|pat| Pattern::new(pat).map(|p| p.matches(filename)).unwrap_or(false));
+        let included = include.iter().any(|pat| {
+            Pattern::new(pat)
+                .map(|p| p.matches(filename))
+                .unwrap_or(false)
+        });
         if !included {
             return false;
         }
     }
 
     if !exclude.is_empty() {
-        let excluded = exclude
-            .iter()
-            .any(|pat| Pattern::new(pat).map(|p| p.matches(filename)).unwrap_or(false));
+        let excluded = exclude.iter().any(|pat| {
+            Pattern::new(pat)
+                .map(|p| p.matches(filename))
+                .unwrap_or(false)
+        });
         if excluded {
             return false;
         }
@@ -150,8 +154,7 @@ fn discover_directory(
                     }
 
                     if locale::fuzzy_eq(&lang_code, &config.ref_lang) {
-                        ctx.ref_resources
-                            .insert(file_name_str.clone(), resource);
+                        ctx.ref_resources.insert(file_name_str.clone(), resource);
                         if !ctx.ref_file_names.contains(&file_name_str) {
                             ctx.ref_file_names.push(file_name_str);
                         }
@@ -191,9 +194,7 @@ fn discover_flat(
     config: &ResolvedConfig,
     ctx: &mut ValidationContext,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let entries: Vec<_> = std::fs::read_dir(path)?
-        .filter_map(|e| e.ok())
-        .collect();
+    let entries: Vec<_> = std::fs::read_dir(path)?.filter_map(|e| e.ok()).collect();
 
     // First pass: find the reference file to get its canonical name
     let mut ref_file_name = None;
@@ -211,7 +212,9 @@ fn discover_flat(
         }
     }
 
-    let canonical_key = ref_file_name.clone().unwrap_or_else(|| "translations".to_string());
+    let canonical_key = ref_file_name
+        .clone()
+        .unwrap_or_else(|| "translations".to_string());
 
     // Second pass: parse all files
     for entry in &entries {
@@ -239,8 +242,7 @@ fn discover_flat(
                 }
 
                 if locale::fuzzy_eq(&lang_code, &config.ref_lang) {
-                    ctx.ref_resources
-                        .insert(canonical_key.clone(), resource);
+                    ctx.ref_resources.insert(canonical_key.clone(), resource);
                     if !ctx.ref_file_names.contains(&file_name_str) {
                         ctx.ref_file_names.push(file_name_str);
                     }
@@ -256,8 +258,7 @@ fn discover_flat(
             }
             Err(e) => {
                 ctx.parse_failures.push(
-                    Diagnostic::error(CheckId::ParseErrors, &lang_code, e)
-                        .with_file(file_name_str),
+                    Diagnostic::error(CheckId::ParseErrors, &lang_code, e).with_file(file_name_str),
                 );
             }
         }
