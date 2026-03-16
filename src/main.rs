@@ -1,14 +1,7 @@
 use std::path::Path;
 use std::process;
 
-mod cli;
-mod config;
-mod diagnostic;
-mod discovery;
-mod layout;
-mod locale;
-mod report;
-mod validate;
+use i18n_validate::{cli, config, discovery, layout, report, validate};
 
 fn main() {
     let args = cli::parse();

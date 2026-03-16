@@ -37,6 +37,7 @@ struct JsonSummary {
 pub fn render(
     diagnostics: &[Diagnostic],
     ctx: &ValidationContext,
+    strict: bool,
 ) -> Result<String, Box<dyn std::error::Error>> {
     let error_count = diagnostics
         .iter()
@@ -46,6 +47,8 @@ pub fn render(
         .iter()
         .filter(|d| d.severity == Severity::Warning)
         .count();
+
+    let passed = error_count == 0 && (!strict || warning_count == 0);
 
     let report = JsonReport {
         version: VERSION.to_string(),
@@ -68,7 +71,7 @@ pub fn render(
         summary: JsonSummary {
             errors: error_count,
             warnings: warning_count,
-            passed: error_count == 0,
+            passed,
         },
     };
 

@@ -5,6 +5,9 @@ static LOCALE_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[a-zA-Z]{2,3}(?:[_-][a-zA-Z]{4})?(?:[_-](?:[a-zA-Z]{2}|\d{3}))?$").unwrap()
 });
 
+static ANDROID_REGION_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^([a-zA-Z]{2,3})[_-]r([A-Z]{2})$").unwrap());
+
 /// Known ISO 639-1 two-letter language codes (subset for validation).
 const ISO_639_1: &[&str] = &[
     "aa", "ab", "af", "ak", "am", "an", "ar", "as", "av", "ay", "az", "ba", "be", "bg", "bh", "bi",
@@ -91,8 +94,7 @@ pub fn extract_from_path(dirname: &str) -> Option<String> {
 
 /// Strip Android `r` region prefix: `pt-rBR` -> `pt-BR`, `zh-rTW` -> `zh-TW`
 fn strip_android_region_prefix(s: &str) -> String {
-    let re = Regex::new(r"^([a-zA-Z]{2,3})[_-]r([A-Z]{2})$").unwrap();
-    if let Some(caps) = re.captures(s) {
+    if let Some(caps) = ANDROID_REGION_RE.captures(s) {
         format!("{}-{}", &caps[1], &caps[2])
     } else {
         s.to_string()

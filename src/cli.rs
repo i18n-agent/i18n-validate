@@ -9,8 +9,8 @@ pub struct Args {
     pub path: String,
 
     /// Reference language code (default: en)
-    #[arg(long = "ref", default_value = "en")]
-    pub ref_lang: String,
+    #[arg(long = "ref")]
+    pub ref_lang: Option<String>,
 
     /// Expected languages (comma-separated, e.g., "de,ja,fr")
     #[arg(long, value_delimiter = ',')]

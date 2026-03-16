@@ -113,11 +113,11 @@ pub fn resolve(args: &Args) -> Result<ResolvedConfig, Box<dyn std::error::Error>
     let toml = toml_config.unwrap_or_default();
 
     // Merge: CLI > TOML > defaults
-    let ref_lang = if args.ref_lang != "en" {
-        args.ref_lang.clone()
-    } else {
-        toml.ref_lang.unwrap_or_else(|| args.ref_lang.clone())
-    };
+    let ref_lang = args
+        .ref_lang
+        .clone()
+        .or(toml.ref_lang)
+        .unwrap_or_else(|| "en".to_string());
 
     let expected_languages = if !args.expect.is_empty() {
         args.expect.clone()

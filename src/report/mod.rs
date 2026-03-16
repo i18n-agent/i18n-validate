@@ -15,8 +15,20 @@ pub fn render(
     config: &ResolvedConfig,
     args: &Args,
 ) -> Result<bool, Box<dyn std::error::Error>> {
+    let has_errors = diagnostics
+        .iter()
+        .any(|d| matches!(d.severity, Severity::Error));
+    let has_warnings = diagnostics
+        .iter()
+        .any(|d| matches!(d.severity, Severity::Warning));
+    let fail = has_errors || (config.strict && has_warnings);
+
+    if args.quiet {
+        return Ok(fail);
+    }
+
     let output = match args.output_format.as_str() {
-        "json" => json::render(diagnostics, ctx)?,
+        "json" => json::render(diagnostics, ctx, config.strict)?,
         "junit" => junit::render(diagnostics, ctx)?,
         _ => terminal::render(diagnostics, ctx, args)?,
     };
@@ -28,16 +40,5 @@ pub fn render(
         print!("{output}");
     }
 
-    // Determine if validation failed
-    let error_count = diagnostics
-        .iter()
-        .filter(|d| d.severity == Severity::Error)
-        .count();
-    let warning_count = diagnostics
-        .iter()
-        .filter(|d| d.severity == Severity::Warning)
-        .count();
-
-    let has_failures = error_count > 0 || (config.strict && warning_count > 0);
-    Ok(has_failures)
+    Ok(fail)
 }

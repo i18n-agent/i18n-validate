@@ -1,10 +1,22 @@
 use std::collections::HashSet;
+use std::sync::LazyLock;
 
 use regex::Regex;
 
 use crate::diagnostic::{CheckId, Diagnostic, Severity};
 use crate::discovery::ValidationContext;
 use crate::validate::Validator;
+
+// Pre-compiled placeholder regex patterns
+static ICU_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}").unwrap());
+static HBS_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}").unwrap());
+static PRINTF_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"%(\d+\$)?[sdfo]").unwrap());
+static RUBY_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"%\{([a-zA-Z_][a-zA-Z0-9_]*)\}").unwrap());
+static LARAVEL_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r":([a-zA-Z_][a-zA-Z0-9_]*)").unwrap());
 
 pub struct PlaceholdersValidator;
 
@@ -136,34 +148,29 @@ fn extract_placeholders_from_text(text: &str) -> HashSet<String> {
     let mut result = HashSet::new();
 
     // {name} - ICU style
-    let icu_re = Regex::new(r"\{([a-zA-Z_][a-zA-Z0-9_]*)\}").unwrap();
-    for cap in icu_re.captures_iter(text) {
+    for cap in ICU_RE.captures_iter(text) {
         result.insert(cap[1].to_string());
     }
 
     // {{name}} - Handlebars / i18next style
-    let hbs_re = Regex::new(r"\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}").unwrap();
-    for cap in hbs_re.captures_iter(text) {
+    for cap in HBS_RE.captures_iter(text) {
         result.insert(cap[1].to_string());
     }
 
     // %s, %d - printf positional
-    let printf_re = Regex::new(r"%(\d+\$)?[sdfo]").unwrap();
-    for cap in printf_re.captures_iter(text) {
+    for cap in PRINTF_RE.captures_iter(text) {
         result.insert(cap[0].to_string());
     }
 
     // %{name} - Ruby style
-    let ruby_re = Regex::new(r"%\{([a-zA-Z_][a-zA-Z0-9_]*)\}").unwrap();
-    for cap in ruby_re.captures_iter(text) {
+    for cap in RUBY_RE.captures_iter(text) {
         result.insert(cap[1].to_string());
     }
 
     // :name - Laravel style
-    let laravel_re = Regex::new(r":([a-zA-Z_][a-zA-Z0-9_]*)").unwrap();
     // Only use laravel style if the text doesn't look like it has other placeholder styles
     if result.is_empty() {
-        for cap in laravel_re.captures_iter(text) {
+        for cap in LARAVEL_RE.captures_iter(text) {
             result.insert(cap[1].to_string());
         }
     }
