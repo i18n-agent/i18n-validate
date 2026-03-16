@@ -428,6 +428,7 @@ dependencies = [
  "colored",
  "glob",
  "i18n-convert",
+ "indexmap",
  "pretty_assertions",
  "quick-xml 0.36.2",
  "regex",

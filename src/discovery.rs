@@ -4,7 +4,8 @@ use std::path::Path;
 use glob::Pattern;
 use i18n_convert::detect::detect_best;
 use i18n_convert::formats::FormatRegistry;
-use i18n_convert::ir::I18nResource;
+use i18n_convert::ir::{EntryValue, I18nEntry, I18nResource, ResourceMetadata};
+use indexmap::IndexMap;
 
 use crate::config::ResolvedConfig;
 use crate::diagnostic::{CheckId, Diagnostic};
@@ -280,10 +281,15 @@ fn discover_single_file(
     match parse_file(registry, path) {
         Ok((resource, format_id)) => {
             if !ctx.discovered_formats.contains(&format_id) {
-                ctx.discovered_formats.push(format_id);
+                ctx.discovered_formats.push(format_id.clone());
             }
-            // For single-file formats, we store everything as reference
-            ctx.ref_resources.insert(file_name, resource);
+
+            if format_id == "xcstrings" {
+                discover_single_file_xcstrings(&file_name, resource, ctx);
+            } else {
+                // Bilingual formats (XLIFF, PO, etc.): source + target in one resource.
+                discover_single_file_bilingual(&file_name, resource, ctx);
+            }
         }
         Err(e) => {
             ctx.parse_failures.push(
@@ -294,4 +300,237 @@ fn discover_single_file(
     }
 
     Ok(())
+}
+
+/// Handle bilingual single-file formats like XLIFF where each entry has
+/// a source string (reference) and a target string (translation).
+fn discover_single_file_bilingual(
+    file_name: &str,
+    resource: I18nResource,
+    ctx: &mut ValidationContext,
+) {
+    // Determine reference and target languages from metadata
+    let source_lang = resource
+        .metadata
+        .source_locale
+        .clone()
+        .unwrap_or_else(|| ctx.ref_lang.clone());
+    let target_lang = resource.metadata.locale.clone();
+
+    // Override ctx.ref_lang with the file's declared source language
+    ctx.ref_lang = locale::normalize(&source_lang);
+
+    // Build the reference resource from source strings
+    let mut ref_entries = IndexMap::new();
+    for (key, entry) in &resource.entries {
+        let ref_value = entry
+            .source
+            .as_ref()
+            .map(|s| EntryValue::Simple(s.clone()))
+            .unwrap_or_else(|| EntryValue::Simple(String::new()));
+
+        ref_entries.insert(
+            key.clone(),
+            I18nEntry {
+                key: key.clone(),
+                value: ref_value,
+                comments: entry.comments.clone(),
+                contexts: entry.contexts.clone(),
+                translatable: entry.translatable,
+                ..Default::default()
+            },
+        );
+    }
+
+    let ref_resource = I18nResource {
+        metadata: ResourceMetadata {
+            source_format: resource.metadata.source_format,
+            locale: Some(locale::normalize(&source_lang)),
+            source_locale: Some(locale::normalize(&source_lang)),
+            ..Default::default()
+        },
+        entries: ref_entries,
+    };
+
+    ctx.ref_resources
+        .insert(file_name.to_string(), ref_resource);
+    ctx.ref_file_names.push(file_name.to_string());
+
+    // Store the original parsed resource as the target language resource
+    if let Some(tl) = target_lang {
+        let normalized_tl = locale::normalize(&tl);
+        if !locale::fuzzy_eq(&normalized_tl, &ctx.ref_lang) {
+            ctx.lang_resources
+                .entry(normalized_tl.clone())
+                .or_default()
+                .insert(file_name.to_string(), resource);
+
+            if !ctx.discovered_languages.contains(&normalized_tl) {
+                ctx.discovered_languages.push(normalized_tl);
+            }
+        }
+    }
+}
+
+/// Handle multi-language single-file formats like xcstrings where the primary
+/// locale entries are in the resource and additional locales are serialized
+/// in entry properties as `xcstrings.localization.{locale}`.
+fn discover_single_file_xcstrings(
+    file_name: &str,
+    resource: I18nResource,
+    ctx: &mut ValidationContext,
+) {
+    // The source locale from xcstrings metadata
+    let source_lang = resource
+        .metadata
+        .source_locale
+        .clone()
+        .or_else(|| resource.metadata.locale.clone())
+        .unwrap_or_else(|| ctx.ref_lang.clone());
+
+    ctx.ref_lang = locale::normalize(&source_lang);
+
+    // Collect all locale codes from entry properties
+    let mut locale_codes: Vec<String> = Vec::new();
+    for (_key, entry) in &resource.entries {
+        for prop_key in entry.properties.keys() {
+            if let Some(locale_str) = prop_key.strip_prefix("xcstrings.localization.") {
+                let normalized = locale::normalize(locale_str);
+                if !locale::fuzzy_eq(&normalized, &ctx.ref_lang)
+                    && !locale_codes.contains(&normalized)
+                {
+                    locale_codes.push(normalized);
+                }
+            }
+        }
+    }
+
+    // Build the reference resource (primary locale entries as-is)
+    let mut ref_entries = IndexMap::new();
+    for (key, entry) in &resource.entries {
+        ref_entries.insert(
+            key.clone(),
+            I18nEntry {
+                key: key.clone(),
+                value: entry.value.clone(),
+                comments: entry.comments.clone(),
+                translatable: entry.translatable,
+                ..Default::default()
+            },
+        );
+    }
+
+    let ref_resource = I18nResource {
+        metadata: ResourceMetadata {
+            source_format: resource.metadata.source_format,
+            locale: Some(ctx.ref_lang.clone()),
+            source_locale: Some(ctx.ref_lang.clone()),
+            ..Default::default()
+        },
+        entries: ref_entries,
+    };
+
+    ctx.ref_resources
+        .insert(file_name.to_string(), ref_resource);
+    ctx.ref_file_names.push(file_name.to_string());
+
+    // Build a resource for each target locale from the serialized property data
+    for locale_code in &locale_codes {
+        let mut lang_entries = IndexMap::new();
+
+        for (key, entry) in &resource.entries {
+            // Find the matching property for this locale (try original and normalized forms)
+            let prop_json = entry
+                .properties
+                .iter()
+                .find(|(pk, _)| {
+                    pk.strip_prefix("xcstrings.localization.")
+                        .map(|lc| locale::fuzzy_eq(&locale::normalize(lc), locale_code))
+                        .unwrap_or(false)
+                })
+                .map(|(_, v)| v.as_str());
+
+            if let Some(json_str) = prop_json {
+                // Parse the localization JSON to extract the value
+                if let Ok(loc_data) = serde_json::from_str::<serde_json::Value>(json_str) {
+                    let value = extract_xcstrings_value(&loc_data);
+                    lang_entries.insert(
+                        key.clone(),
+                        I18nEntry {
+                            key: key.clone(),
+                            value,
+                            translatable: entry.translatable,
+                            ..Default::default()
+                        },
+                    );
+                }
+            }
+            // If no property for this locale, the key is missing in that language
+            // (which is correct — the missing-keys validator will flag it)
+        }
+
+        if !lang_entries.is_empty() {
+            let lang_resource = I18nResource {
+                metadata: ResourceMetadata {
+                    source_format: resource.metadata.source_format,
+                    locale: Some(locale_code.clone()),
+                    source_locale: Some(ctx.ref_lang.clone()),
+                    ..Default::default()
+                },
+                entries: lang_entries,
+            };
+
+            ctx.lang_resources
+                .entry(locale_code.clone())
+                .or_default()
+                .insert(file_name.to_string(), lang_resource);
+        }
+
+        if !ctx.discovered_languages.contains(locale_code) {
+            ctx.discovered_languages.push(locale_code.clone());
+        }
+    }
+}
+
+/// Extract the entry value from an xcstrings localization JSON object.
+/// The JSON can contain a `stringUnit`, `variations`, or `substitutions`.
+fn extract_xcstrings_value(loc_data: &serde_json::Value) -> EntryValue {
+    let loc_obj = match loc_data.as_object() {
+        Some(o) => o,
+        None => return EntryValue::Simple(String::new()),
+    };
+
+    // Check for stringUnit (simple value)
+    if let Some(su) = loc_obj.get("stringUnit") {
+        if let Some(value) = su.get("value").and_then(|v| v.as_str()) {
+            return EntryValue::Simple(value.to_string());
+        }
+    }
+
+    // Check for variations -> plural
+    if let Some(variations) = loc_obj.get("variations") {
+        if let Some(plural) = variations.get("plural").and_then(|p| p.as_object()) {
+            let mut ps = i18n_convert::ir::PluralSet::default();
+            for (category, variant) in plural {
+                let value = variant
+                    .get("stringUnit")
+                    .and_then(|su| su.get("value"))
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string();
+                match category.as_str() {
+                    "zero" => ps.zero = Some(value),
+                    "one" => ps.one = Some(value),
+                    "two" => ps.two = Some(value),
+                    "few" => ps.few = Some(value),
+                    "many" => ps.many = Some(value),
+                    "other" => ps.other = value,
+                    _ => {}
+                }
+            }
+            return EntryValue::Plural(ps);
+        }
+    }
+
+    EntryValue::Simple(String::new())
 }
