@@ -1,2 +1,0 @@
-[patch.'https://github.com/i18n-agent/i18n-convert']
-i18n-convert = { path = "../i18n-convert" }
