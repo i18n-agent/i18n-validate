@@ -1,0 +1,25 @@
+[package]
+name = "i18n-validate"
+version = "0.1.0"
+edition = "2021"
+description = "Validate i18n translation files for consistency across 32 formats"
+license = "MIT"
+repository = "https://github.com/i18n-agent/i18n-validate"
+keywords = ["i18n", "l10n", "validation", "localization", "ci"]
+categories = ["command-line-utilities", "internationalization"]
+
+[dependencies]
+i18n-convert = { git = "https://github.com/i18n-agent/i18n-convert" }
+clap = { version = "4", features = ["derive"] }
+thiserror = "2"
+regex = "1"
+toml = "0.8"
+colored = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+quick-xml = "0.36"
+glob = "0.3"
+
+[dev-dependencies]
+pretty_assertions = "1"
+tempfile = "3"

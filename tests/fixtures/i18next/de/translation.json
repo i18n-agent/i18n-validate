@@ -1,0 +1,10 @@
+{
+  "greeting": "Hallo",
+  "farewell": "Auf Wiedersehen",
+  "pricing": {
+    "total": "Gesamt: {price} {currency}",
+    "items": "{count, plural, one {# Artikel} other {# Artikel}}"
+  },
+  "empty_test": "Dies hat Inhalt",
+  "short": "OK"
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@i18n-agent/i18n-validate",
+  "version": "0.1.0",
+  "description": "Validate i18n translation files for consistency across 32 formats",
+  "bin": {
+    "i18n-validate": "bin/i18n-validate"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ],
+  "repository": "https://github.com/i18n-agent/i18n-validate",
+  "license": "MIT"
+}
